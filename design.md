@@ -31,3 +31,5 @@ Right now the design is as follows:
 
 Notes
 Seems to be a bug when requesting any data from specifically page 4 across runs, if its less than 4 pages the program finishes in time if its 4 or more, it always wait for the timeout because page 4 doesnt seem to finish or something
+
+optimal workers is time for 1 batch request/requestpersecond

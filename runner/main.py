@@ -1,20 +1,27 @@
-# import aiohttp
-from client import APIClient
-import logging
 import asyncio
+import logging
+import sys
+import time
+
+from client import APIClient
 from engine import orchestrator
 
-BASE_URL = 'https://patent-fetcher-api.nlpatent.xyz'
-TOKEN = 'demo-token-12345'
+BASE_URL = "https://patent-fetcher-api.nlpatent.xyz"
+TOKEN = "demo-token-12345"
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+
 def run():
-    client = APIClient(BASE_URL, TOKEN, from_date='2026-04-01', to_date='2026-04-19')
+    if len(sys.argv) < 3:
+        logger.error("Usage: docker run patent_fetcher <start_date> <end_date>")
+        return
+    from_date_arg = sys.argv[1]
+    to_date_arg = sys.argv[2]
+    client = APIClient(BASE_URL, TOKEN, from_date=from_date_arg, to_date=to_date_arg)
     logger.info("Pinging API for initial metadata...")
     initial_data = client.ping_initial_metadata()
     if not initial_data:
@@ -25,13 +32,17 @@ def run():
 
     if total_items > 0:
         try:
+            start = time.perf_counter()
             asyncio.run(orchestrator(total_items, client))
-            logger.info("Download process completed successfully.")
+            duration = time.perf_counter() - start
+            logger.info(
+                f"Download process completed successfully. time took: {duration:.2f}s"
+            )
         except KeyboardInterrupt:
             logger.warning("Process interrupted by user.")
         except Exception as e:
             logger.error(f"orchestrator failed: {e}")
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     run()
-
-
