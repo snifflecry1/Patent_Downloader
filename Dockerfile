@@ -1,4 +1,3 @@
-# 1. Use consistent uppercase for FROM/AS to clear warnings
 FROM python:3.13-slim AS base
 WORKDIR /app
 
