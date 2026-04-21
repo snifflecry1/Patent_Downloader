@@ -21,16 +21,20 @@ class RateLimiter:
                 await asyncio.sleep(wait)
             self.last_call = asyncio.get_running_loop().time()
     
-async def fetch_worker(page_queue: asyncio.Queue, write_queue: asyncio.Queue, session, client, limiter):
+async def fetch_worker(id, page_queue: asyncio.Queue, write_queue: asyncio.Queue, session, client, limiter):
     while True:
         page_num = await page_queue.get()
         try:
+            logger.info(f"[Worker {id}] STARTING Read: Page {page_num}")
             data = await client.fetch_page(session, page_num, limiter)
             if data and data.patents:
-                logger.info(f"Page {page_num} of patent data to write queue")
+                logger.info(f"Worker {id} finished with Page {page_num} of patent data to write queue")
                 await write_queue.put(data.patents)
+            else:
+                logger.warning(f"[Worker {id}] Page {page_num} returned no data.")
+
         except Exception as e:
-            logger.error(f"Error on page {page_num}: {e}")
+            logger.error(f"Error: Worker {id} crashed on page {page_num}: {e}")
         finally:
             page_queue.task_done()
 
@@ -61,22 +65,27 @@ async def orchestrator(total_items, apiclient, items_per_page=1000):
     write_queue = asyncio.Queue()
     for i in range(1, total_pages + 1):
         page_queue.put_nowait(i)
-        
+    logger.info("Page queue set up")
     limiter = RateLimiter(limit=100)
     filename = "output.jsonl"
     
     async with ClientSession(headers=apiclient.headers) as session:
         writer_task = asyncio.create_task(storage_writer(write_queue, filename=filename))
-        fetchers = [asyncio.create_task(fetch_worker(page_queue, write_queue, session, apiclient, limiter)) 
+        fetchers = [asyncio.create_task(fetch_worker(i, page_queue, write_queue, session, apiclient, limiter)) 
                     for i in range(4)]
 
-        logger.info("Waiting for page_queue to join (with 60s timeout)...")
+        while not page_queue.empty():
+            await asyncio.sleep(0.5) 
+        logger.info("All pages assigned, waiting for write task to finish (with 60s timeout)...")
         try:
             await asyncio.wait_for(page_queue.join(), timeout=60.0)
             logger.info("page_queue joined successfully!")
         except asyncio.TimeoutError:
-            logger.info(f"STALL DETECTED: {page_queue.qsize()} items left in queue.")
-
+            logger.error(f"STALL DETECTED: {page_queue.qsize()} items left in queue.")
+            for i, f in enumerate(fetchers):
+                if f.done():
+                    try: f.result()
+                    except Exception as e: logger.error(f"Fetcher {i} crashed: {e}")
         for f in fetchers: 
             f.cancel()
 

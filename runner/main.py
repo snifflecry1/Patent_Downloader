@@ -8,13 +8,13 @@ BASE_URL = 'https://patent-fetcher-api.nlpatent.xyz'
 TOKEN = 'demo-token-12345'
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 def run():
-    client = APIClient(BASE_URL, TOKEN, from_date='2026-04-17', to_date='2026-04-19')
+    client = APIClient(BASE_URL, TOKEN, from_date='2026-04-01', to_date='2026-04-19')
     logger.info("Pinging API for initial metadata...")
     initial_data = client.ping_initial_metadata()
     if not initial_data:
