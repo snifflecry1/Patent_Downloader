@@ -29,6 +29,7 @@ How do you handle downloading 160m patents ?
 
 Other additions I left out
 - Calculating the appropriate amount of workers to use using my formula, code could be added to time 1 request of 1000 patents and then update the worker number afterwards
+- I didnt add testing for my main.py since I thought my api client and the engine were the meat of this excercise, same with models
 
 
 
