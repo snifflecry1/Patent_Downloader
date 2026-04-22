@@ -2,12 +2,10 @@ import asyncio
 import logging
 import sys
 import time
+import os
 
 from client import APIClient
 from engine import orchestrator
-
-BASE_URL = "https://patent-fetcher-api.nlpatent.xyz"
-TOKEN = "demo-token-12345"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -15,7 +13,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+BASE_URL = os.getenv("BASE_URL")
+TOKEN = os.getenv("TOKEN")
+
 def run():
+    if not TOKEN:
+        logger.error("API TOKEN is missing. Set it in your .env file or environment.")
+        return
     if len(sys.argv) < 3:
         logger.error("Usage: docker run patent_fetcher <start_date> <end_date>")
         return
